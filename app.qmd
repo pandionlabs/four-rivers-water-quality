@@ -41,29 +41,31 @@ tib_tags <- tibble::tibble(
     'Extra super cool thing 💡',
     'A fifth cool thing, yay 🧲'
   ),
-  text = 'Duis imperdiet, est vitae mollis porttitor, neque metus ornare urna, a ullamcorper dolor sem at tellus.' 
-) |> 
+  text = 'Duis imperdiet, est vitae mollis porttitor, neque metus ornare urna, a ullamcorper dolor sem at tellus.'
+) |>
   dplyr::mutate(
     headings = purrr::map(
-      headings, 
+      headings,
       \(x) htmltools::div(htmltools::strong(x))
     ),
     text = purrr::map(
-      text, 
+      text,
       htmltools::div
     ),
     combined = purrr::map2(
       headings,
       text,
-      \(x, y) htmltools::div(
-        style = htmltools::css(
-          width = '300px',
-          margin_right = '20px',
-          margin_bottom = '20px'
-        ),
-        x, 
-        y
-      )
+      \(x, y) {
+        htmltools::div(
+          style = htmltools::css(
+            width = '300px',
+            margin_right = '20px',
+            margin_bottom = '20px'
+          ),
+          x,
+          y
+        )
+      }
     )
   )
 
@@ -81,7 +83,7 @@ htmltools::div(
 
 ---
 
-### Interactive part
+### Interactive Plot
 
 ```{r}
 #| context: setup
@@ -143,26 +145,28 @@ df_sf |>
 })
 ```
 
-
-
 ---
 
-### Interactive 3
+### Interactive Map
 
 ```{r}
 #| column: page
 
 library(leaflet)
 
+max_month = max(lubridate::month(df_sf$date_actual), na.rm = TRUE)
+min_month = min(lubridate::month(df_sf$date_actual), na.rm = TRUE)
 layout_sidebar(
   height = 600,
-  sidebar =  sidebar(
-    shiny::selectizeInput(
-      'select_area', 
-      'Visible Areas', 
-      choices = unique(df_sf$Area_name),
-      selected = c("River Fynn and River Lark", "Tidal River Deben", "Non-Tidal River Deben"),
-      multiple = TRUE
+  sidebar = sidebar(
+    shiny::sliderInput(
+      'month_range_map',
+      'Month Range',
+      min = min_month,
+      max = max_month,
+      value = c(max_month, max_month),
+      step = 1,
+      dragRange = TRUE
     )
   ),
   leafletOutput("map", width = "100%", height = "100%")
@@ -173,8 +177,42 @@ layout_sidebar(
 #| context: server
 # Create the map
 
-df_sf$longitude <- sf::st_coordinates(df_sf)[,1]
-df_sf$latitude <- sf::st_coordinates(df_sf)[,2]
+# Filter data based on month range
+observe({
+  filtered_data <- df_sf |>
+    dplyr::filter(
+      lubridate::month(date_actual) >= input$month_range_map[1],
+      lubridate::month(date_actual) <= input$month_range_map[2]
+    )
+
+  filtered_data$longitude <- sf::st_coordinates(filtered_data)[, 1]
+  filtered_data$latitude <- sf::st_coordinates(filtered_data)[, 2]
+
+  # Create color palette for E. coli values
+  pal <- colorNumeric(
+    palette = "viridis",
+    domain = filtered_data$E_coli_count_Colonies_per_1ml
+  )
+
+  leafletProxy("map", data = filtered_data) |>
+    clearShapes() |>
+    clearControls() |>  # Clear existing legends
+    addCircles(
+      ~longitude,
+      ~latitude,
+      radius = 200, # Fixed radius in meters
+      stroke = FALSE,
+      fillOpacity = 0.7,
+      fillColor = ~ pal(E_coli_count_Colonies_per_1ml)
+    ) |>
+    addLegend(
+      pal = pal, 
+      values = ~E_coli_count_Colonies_per_1ml,
+      title = "E. coli<br/>(Colonies/ml)",
+      position = "bottomright",
+      opacity = 0.7
+    )
+})
 
 library(leaflet)
 output$map <- renderLeaflet({
@@ -182,17 +220,6 @@ output$map <- renderLeaflet({
     addTiles() %>%
     setView(lng = 1.337325608, lat = 52.08806268, zoom = 11)
 })
-leafletProxy("map", data = df_sf) |> 
-      clearShapes() |> 
-      addCircles(~longitude, ~latitude, 
-      radius = ~E_coli_count_Colonies_per_1ml, 
-      # radius=radius,
-      # layerId=~zipcode,
-      stroke=FALSE, 
-      fillOpacity = 0.4,
-      fillColor = ~E_coli_count_Colonies_per_1ml
-      )
-
 ```
 
 
