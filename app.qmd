@@ -105,14 +105,7 @@ layout_sidebar(
       choices = unique(df_sf$Area_name),
       selected = c("River Fynn and River Lark", "Tidal River Deben", "Non-Tidal River Deben"),
       multiple = TRUE
-    )#,
-    # shiny::sliderInput(
-    #   'slider_weight',
-    #   'Minimum Weight (g)',
-    #   min = 1000,
-    #   max = 5000,
-    #   value = 3000
-    # )
+    )
   ),
   shiny::plotOutput('output_plot')
 )
@@ -126,12 +119,7 @@ output$output_plot <- shiny::renderPlot({
 df_sf |>
   dplyr::filter(
       Area_name %in% input$select_area
-      # body_mass_g >= input$slider_weight
     ) |>
-#   # dplyr::filter(
-#   #   # Location_Description == "Woodbridge Tide Mill"
-#   #   Area_name == "River Fynn and River Lark"
-#   # ) |>
   ggplot(
     aes(x = date_actual, y = E_coli_count_Colonies_per_1ml)
   ) +
@@ -144,7 +132,6 @@ df_sf |>
     panel.grid.minor = element_blank(),
     legend.position = "none"
   ) +
-  # geom_point(
   geom_jitter(
     # aes(color = E_coli_count_Colonies_per_1ml),
     aes(color = Area_name),
@@ -160,12 +147,13 @@ df_sf |>
 
 ---
 
-
-### Interactive part 2
-
+### Interactive 3
 
 ```{r}
 #| column: page
+
+library(leaflet)
+
 layout_sidebar(
   height = 600,
   sidebar =  sidebar(
@@ -175,57 +163,37 @@ layout_sidebar(
       choices = unique(df_sf$Area_name),
       selected = c("River Fynn and River Lark", "Tidal River Deben", "Non-Tidal River Deben"),
       multiple = TRUE
-    )#,
-    # shiny::sliderInput(
-    #   'slider_weight',
-    #   'Minimum Weight (g)',
-    #   min = 1000,
-    #   max = 5000,
-    #   value = 3000
-    # )
+    )
   ),
-  shiny::plotOutput('output_plot')
+  leafletOutput("map", width = "100%", height = "100%")
 )
 ```
 
 ```{r}
 #| context: server
+# Create the map
 
-output$output_plot <- shiny::renderPlot({
+df_sf$longitude <- sf::st_coordinates(df_sf)[,1]
+df_sf$latitude <- sf::st_coordinates(df_sf)[,2]
 
-df_sf |>
-  dplyr::filter(
-      Area_name %in% input$select_area
-      # body_mass_g >= input$slider_weight
-    ) |>
-#   # dplyr::filter(
-#   #   # Location_Description == "Woodbridge Tide Mill"
-#   #   Area_name == "River Fynn and River Lark"
-#   # ) |>
-  ggplot(
-    aes(x = date_actual, y = E_coli_count_Colonies_per_1ml)
-  ) +
-  geom_smooth(aes(color = Area_name),
-    se = FALSE, alpha = 0.6, linewidth = 2) +
-  labs(y = "E.coli Colonies per 1ml", x = "Date") +
-  theme(
-    panel.background = element_rect(fill = "grey98"),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    legend.position = "none"
-  ) +
-  # geom_point(
-  geom_jitter(
-    # aes(color = E_coli_count_Colonies_per_1ml),
-    aes(color = Area_name),
-    size = 4,
-    width = 10
-  ) +
-  scale_y_log10() +
-  scico::scale_color_scico_d()
+library(leaflet)
+output$map <- renderLeaflet({
+  leaflet() %>%
+    addTiles() %>%
+    setView(lng = 1.337325608, lat = 52.08806268, zoom = 11)
 })
-```
+leafletProxy("map", data = df_sf) |> 
+      clearShapes() |> 
+      addCircles(~longitude, ~latitude, 
+      radius = ~E_coli_count_Colonies_per_1ml, 
+      # radius=radius,
+      # layerId=~zipcode,
+      stroke=FALSE, 
+      fillOpacity = 0.4,
+      fillColor = ~E_coli_count_Colonies_per_1ml
+      )
 
+```
 
 
 ### Contact info
