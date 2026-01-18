@@ -102,8 +102,8 @@ layout_sidebar(
   height = 600,
   sidebar =  sidebar(
     shiny::selectizeInput(
-      'select_area', 
-      'Visible Areas', 
+      'select_area',
+      'Visible Areas',
       choices = unique(df_sf$Area_name),
       selected = c("River Fynn and River Lark", "Tidal River Deben", "Non-Tidal River Deben"),
       multiple = TRUE
@@ -118,30 +118,30 @@ layout_sidebar(
 
 output$output_plot <- shiny::renderPlot({
 
-df_sf |>
-  dplyr::filter(
+  df_sf |>
+    dplyr::filter(
       Area_name %in% input$select_area
     ) |>
-  ggplot(
-    aes(x = date_actual, y = E_coli_count_Colonies_per_1ml)
-  ) +
+    ggplot(
+      aes(x = date_actual, y = E_coli_count_Colonies_per_1ml)
+    ) +
   geom_smooth(aes(color = Area_name),
     se = FALSE, alpha = 0.6, linewidth = 2) +
-  labs(y = "E.coli Colonies per 1ml", x = "Date") +
-  theme(
-    panel.background = element_rect(fill = "grey98"),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    legend.position = "none"
-  ) +
-  geom_jitter(
-    # aes(color = E_coli_count_Colonies_per_1ml),
-    aes(color = Area_name),
-    size = 4,
-    width = 10
-  ) +
-  scale_y_log10() +
-  scico::scale_color_scico_d()
+    labs(y = "E.coli Colonies per 1ml", x = "Date") +
+    theme(
+      panel.background = element_rect(fill = "grey98"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      legend.position = "none"
+    ) +
+    geom_jitter(
+      # aes(color = E_coli_count_Colonies_per_1ml),
+      aes(color = Area_name),
+      size = 4,
+      width = 10
+    ) +
+    scale_y_log10() +
+    scico::scale_color_scico_d()
 })
 ```
 
@@ -177,6 +177,9 @@ layout_sidebar(
 #| context: server
 # Create the map
 
+# Load river data
+rivers_sf <- sf::st_read("data/four_rivers.gpkg") |> sf::st_transform(4326)
+
 # Filter data based on month range
 observe({
   filtered_data <- df_sf |>
@@ -196,7 +199,15 @@ observe({
 
   leafletProxy("map", data = filtered_data) |>
     clearShapes() |>
-    clearControls() |>  # Clear existing legends
+    clearControls() |> # Clear existing legends
+    # Add rivers first (below points)
+    addPolylines(
+      data = rivers_sf,
+      color = "#0066CC",
+      weight = 3,
+      opacity = 0.8
+    ) |>
+    # Add circles on top
     addCircles(
       ~longitude,
       ~latitude,
@@ -206,7 +217,7 @@ observe({
       fillColor = ~ pal(E_coli_count_Colonies_per_1ml)
     ) |>
     addLegend(
-      pal = pal, 
+      pal = pal,
       values = ~E_coli_count_Colonies_per_1ml,
       title = "E. coli<br/>(Colonies/ml)",
       position = "bottomright",
@@ -227,5 +238,3 @@ output$map <- renderLeaflet({
 
 
 You can reach me via [mail@example.com](mailto:mail@example.com).
-
-
