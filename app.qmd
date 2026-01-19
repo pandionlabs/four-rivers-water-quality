@@ -1,18 +1,18 @@
 ---
 title: "Four Rivers Water Quality Dashboard"
-format: html
+format: 
+  html:
+    css: theme.scss
 server: shiny
-theme: theme.scss
 ---
 
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 
 ::: textbox
 
-This is a little test demonstration of how to combine Quarto and Shiny to create interactive text documents.
-You know, for those cases where you need interactive elements to play around with but your UI is mostly text.
+This interactive dashboard demonstrates water quality monitoring across four river systems. Use the tools below to explore E. coli levels over time and identify areas of concern.
 
-:::
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque venenatis lectus vel tincidunt sagittis.
 Phasellus vulputate libero vitae bibendum tincidunt.
@@ -23,63 +23,7 @@ Curabitur justo mauris, elementum et tortor vitae, sollicitudin condimentum nisl
 Vestibulum volutpat sapien ultricies ante rutrum, id tincidunt mi viverra. 
 Quisque sodales ullamcorper quam.
 
----
-
-
-
-### Extra information {style="margin-bottom: 30px;"}
-
-
-::: column-page
-
-```{r}
-tib_tags <- tibble::tibble(
-  headings = c(
-    'Cool stuff 🚀',
-    'More cool stuff 💰',
-    'Another cool thing ⚙️',
-    'Extra super cool thing 💡',
-    'A fifth cool thing, yay 🧲'
-  ),
-  text = 'Duis imperdiet, est vitae mollis porttitor, neque metus ornare urna, a ullamcorper dolor sem at tellus.'
-) |>
-  dplyr::mutate(
-    headings = purrr::map(
-      headings,
-      \(x) htmltools::div(htmltools::strong(x))
-    ),
-    text = purrr::map(
-      text,
-      htmltools::div
-    ),
-    combined = purrr::map2(
-      headings,
-      text,
-      \(x, y) {
-        htmltools::div(
-          style = htmltools::css(
-            width = '300px',
-            margin_right = '20px',
-            margin_bottom = '20px'
-          ),
-          x,
-          y
-        )
-      }
-    )
-  )
-
-htmltools::div(
-  style = htmltools::css(
-    display = 'flex',
-    flex_wrap = 'wrap'
-  ),
-  tib_tags$combined
-)
-```
-
 :::
-
 
 ---
 
@@ -97,15 +41,18 @@ source("code.R")
 
 
 ```{r}
-#| column: page
 layout_sidebar(
   height = 600,
-  sidebar =  sidebar(
+  sidebar = sidebar(
     shiny::selectizeInput(
       'select_area',
       'Visible Areas',
       choices = unique(df_sf$Area_name),
-      selected = c("River Fynn and River Lark", "Tidal River Deben", "Non-Tidal River Deben"),
+      selected = c(
+        "River Fynn and River Lark",
+        "Tidal River Deben",
+        "Non-Tidal River Deben"
+      ),
       multiple = TRUE
     )
   ),
@@ -117,7 +64,6 @@ layout_sidebar(
 #| context: server
 
 output$output_plot <- shiny::renderPlot({
-
   df_sf |>
     dplyr::filter(
       Area_name %in% input$select_area
@@ -125,8 +71,12 @@ output$output_plot <- shiny::renderPlot({
     ggplot(
       aes(x = date_actual, y = E_coli_count_Colonies_per_1ml)
     ) +
-  geom_smooth(aes(color = Area_name),
-    se = FALSE, alpha = 0.6, linewidth = 2) +
+    geom_smooth(
+      aes(color = Area_name),
+      se = FALSE,
+      alpha = 0.6,
+      linewidth = 2
+    ) +
     labs(y = "E.coli Colonies per 1ml", x = "Date") +
     theme(
       panel.background = element_rect(fill = "grey98"),
@@ -150,7 +100,6 @@ output$output_plot <- shiny::renderPlot({
 ### Interactive Map
 
 ```{r}
-#| column: page
 
 library(leaflet)
 
@@ -234,7 +183,6 @@ output$map <- renderLeaflet({
 ```
 
 
-### Contact info
+### Contact
 
-
-You can reach me via [mail@example.com](mailto:mail@example.com).
+For questions please contact Pandion Labs at [hello@pandionlabs.dev](mailto:hello@pandionlabs.dev)
