@@ -64,6 +64,19 @@ layout_sidebar(
         "Non-Tidal River Deben"
       ),
       multiple = TRUE
+    ),
+    shiny::selectizeInput(
+      'select_variable',
+      'Water quality variables',
+      choices = c(
+        "E. coli" = "E_coli_count_Colonies_per_1ml",
+        "Phosphate PO4" = "Phosphate_PO4_mgpL",            
+        "Phosphate P" = "Phosphate_P_mgpL",
+        "Nitrate" = "Nitrate_ppm",               
+        "Ammonia" = "Ammonia_ppm"
+      ),
+      selected = c("E_coli_count_Colonies_per_1ml"),
+      multiple = FALSE
     )
   ),
   shiny::plotOutput('output_plot')
@@ -74,10 +87,19 @@ layout_sidebar(
 #| context: server
 
 output$output_plot <- shiny::renderPlot({
+  title_str <- dplyr::case_match(
+      input$select_variable,
+      "E_coli_count_Colonies_per_1ml" ~ "E. coli (Colonies/ml)",
+      "Phosphate_PO4_mgpL" ~ "Phosphate PO4 (mg/L)",            
+      "Phosphate_P_mgpL" ~ "Phosphate P (mg/L)",
+      "Nitrate_ppm" ~ "Nitrate (ppm)",               
+      "Ammonia_ppm" ~ "Ammonia (ppm)"
+    )
+
   df_sf |>
     dplyr::filter(
       Area_name %in% input$select_area,
-      variable == "E_coli_count_Colonies_per_1ml"
+      variable == input$select_variable,
     ) |>
     ggplot(
       aes(x = date_actual, y = values)
@@ -85,20 +107,21 @@ output$output_plot <- shiny::renderPlot({
     geom_smooth(
       aes(color = Area_name),
       se = FALSE,
-      alpha = 0.6,
-      linewidth = 2
+      alpha = 0.8,
+      linewidth = 3
     ) +
-    labs(y = "E.coli Colonies per 1ml", x = "Date") +
+    labs(y = title_str, x = "Date") +
     theme(
       panel.background = element_rect(fill = "grey98"),
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
-      legend.position = "none"
+      legend.position = "top"
     ) +
-    geom_jitter(
+    geom_point(
       # aes(color = E_coli_count_Colonies_per_1ml),
       aes(color = Area_name),
       size = 4,
+      alpha = 0.4,
       width = 10
     ) +
     scale_y_log10() +
@@ -187,7 +210,7 @@ observe({
     addPolylines(
       data = rivers_sf,
       color = "#0066CC",
-      weight = 3,
+      weight = 4,
       opacity = 0.8
     ) |>
     # Add circles on top
@@ -209,8 +232,10 @@ observe({
 })
 
 output$map <- renderLeaflet({
-  leaflet() %>%
-    addTiles() %>%
+  leaflet() |> 
+    addTiles(
+      urlTemplate = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+    ) |> 
     setView(lng = 1.337325608, lat = 52.08806268, zoom = 11)
 })
 ```
